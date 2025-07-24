@@ -27,8 +27,16 @@ const routes = [
     label: "Categories",
   },
   {
-    href: "/settings",
-    label: "Settings",
+    href: "/powerbi",
+    label: "PowerBi",
+  },
+  {
+    href: "/getwise",
+    label: "GetWise",
+  },
+  {
+    href: "/tax",
+    label: "TaxWise",
   },
 ];
 

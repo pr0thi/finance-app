@@ -11,6 +11,7 @@ import { DatePicker } from "@/components/date-picker";
 import { insertTransactionSchema } from "@/db/schema";
 import { convertAmountToMiliunits } from "@/lib/utils";
 import { AmountInput } from "@/components/amount-input";
+import { ImageUploader } from "@/components/image-uploader"; // Import the new component
 import {
   Form,
   FormControl,
@@ -65,13 +66,13 @@ export const TransactionForm = ({
   });
 
   const handleSubmit = (values: FormValues) => {
-    const amount = parseFloat(values.amount)
+    const amount = parseFloat(values.amount);
     const amountInMiliunits = convertAmountToMiliunits(amount);
 
     onSubmit({
       ...values,
       amount: amountInMiliunits,
-    })
+    });
   };
 
   const handleDelete = () => {
@@ -84,6 +85,9 @@ export const TransactionForm = ({
         onSubmit={form.handleSubmit(handleSubmit)}
         className="space-y-4 pt-4"
       >
+        {/* Add the ImageUploader component at the top of the form */}
+        <ImageUploader setValue={form.setValue} disabled={disabled} />
+
         <FormField
           name="date"
           control={form.control}
@@ -144,7 +148,7 @@ export const TransactionForm = ({
             <FormItem>
               <FormLabel>Payee</FormLabel>
               <FormControl>
-                <Input 
+                <Input
                   disabled={disabled}
                   placeholder="Add a payee"
                   {...field}
@@ -160,7 +164,7 @@ export const TransactionForm = ({
             <FormItem>
               <FormLabel>Amount</FormLabel>
               <FormControl>
-                <AmountInput 
+                <AmountInput
                   {...field}
                   disabled={disabled}
                   placeholder="0.00"

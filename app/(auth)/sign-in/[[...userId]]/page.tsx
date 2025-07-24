@@ -17,12 +17,12 @@ export default function Page() {
             <SignIn />
           </ClerkLoaded>
           <ClerkLoading>
-            <Loader2 className="animate-spin text-muted-foreground"/>
+            <Loader2 className="animate-spin text-muted-foreground" />
           </ClerkLoading>
         </div>
       </div>
       <div className="h-full bg-blue-600 hidden lg:flex items-center justify-center">
-        <Image src="/logo.svg" height={100} width={100} alt="Logo"/>
+        <Image src="/logo.svg" height={100} width={100} alt="Logo" />
       </div>
     </div>
   );
