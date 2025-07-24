@@ -2,14 +2,15 @@
 import { DataGrid } from "@/components/data-grid";
 import { useGetSummary } from "@/features/summary/api/use-get-summary";
 import { useState } from "react";
+import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import { Card, CardHeader, CardContent } from "@/components/ui/card"; // ShadCN for styling
 import Image from "next/image";
-import { 
-  generateFinancialAdvice, 
-  generateInvestmentAdvice, 
-  answerCustomQuery 
-} from "./advisoryEngine";
+
+if (typeof window === "undefined") {
+  require("dotenv").config();
+}
+
 
 export default function GetWise() {
   const { data, isLoading } = useGetSummary();
@@ -18,47 +19,83 @@ export default function GetWise() {
   const [userQuery, setUserQuery] = useState(""); // To store user query
   const [customAiResponse, setCustomAiResponse] = useState(null); // For custom query AI response
   const [showInput, setShowInput] = useState(false); // To toggle input box for "Ask AI"
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
+  async function generateAnswer(prompt: string){
+    setLoading(true); // Start loading
+    try {
+      const response = await axios({
+        url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+        method: "post",
+        data: {
+          contents: [
+            {
+              parts: [
+                {
+                  text: prompt, // Accepting prompt as a parameter
+                },
+              ],
+            },
+          ],
+        },
+      });
 
-  // Function to generate advice using our rule-based system
-  async function generateAdvice(type: string) {
-    if (!data) return;
-    
-    setLoading(true);
-    
-    // Simulate API call with setTimeout
-    setTimeout(() => {
-      let advice;
-      
-      switch (type) {
-        case 'financial':
-          advice = generateFinancialAdvice(data);
-          break;
-        case 'investment':
-          advice = generateInvestmentAdvice(data);
-          break;
-        default:
-          advice = "Please select a valid advice type.";
-      }
-      
-      setAiResponse(advice);
-      setLoading(false);
-    }, 800); // Simulate loading time for better UX
+      // Capture AI response
+      const advice = response.data.candidates[0].content.parts[0].text;
+      setAiResponse(advice); // Set AI response
+    } catch (error) {
+      console.error("Error fetching AI response:", error);
+    } finally {
+      setLoading(false); // End loading
+    }
   }
 
-  // Handle custom user query
+  const financialAdvicePrompt = `
+    My current financial summary:
+    - Income: ₹${data?.incomeAmount}
+    - Expenses: ₹${data?.expensesAmount}
+    - Remaining Balance: ₹${data?.remainingAmount}
+    - Categories spend: ${data?.categories
+      .map((cat) => `${cat.name}: ₹${cat.value}`)
+      .join(", ")}
+    - Spending over days: ${data?.days
+      .map(
+        (day) =>
+          `${new Date(day.date).toLocaleDateString()}: Income: ₹${
+            day.income
+          }, Expenses: ₹${day.expenses}`
+      )
+      .join("; ")}
+
+    Please analyze the data and provide crisp financial planning advice in ₹. Suggest how I can improve savings, manage expenses, and optimize spending across categories.
+  `;
+
+  const customQueryPrompt = `
+    Financial question: ${userQuery}
+    My current financial summary:
+    - Income: ₹${data?.incomeAmount}
+    - Expenses: ₹${data?.expensesAmount}
+    - Remaining Balance: ₹${data?.remainingAmount}
+    - Categories spend: ${data?.categories
+      .map((cat) => `${cat.name}: ₹${cat.value}`)
+      .join(", ")}
+    - Spending over days: ${data?.days
+      .map(
+        (day) =>
+          `${new Date(day.date).toLocaleDateString()}: Income: ₹${
+            day.income
+          }, Expenses: ₹${day.expenses}`
+      )
+      .join("; ")}
+  `;
+
   async function handleUserQuery() {
     if (userQuery.trim() === "") {
       return;
     }
-    
     setLoading(true);
-    
-    // Simulate API call with setTimeout
-    setTimeout(() => {
-      const response = answerCustomQuery(userQuery, data);
-      setCustomAiResponse(response);
-      setLoading(false);
-    }, 800); // Simulate loading time for better UX
+    await generateAnswer(customQueryPrompt);
+    setCustomAiResponse(aiResponse);
+    setLoading(false);
   }
 
   return (
@@ -67,17 +104,39 @@ export default function GetWise() {
 
       <div className="mt-4 flex space-x-4 justify-center">
         <button
-          onClick={() => generateAdvice('financial')}
+          onClick={() => generateAnswer(financialAdvicePrompt)}
           className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition"
-          disabled={loading || isLoading}
+          disabled={loading}
         >
           {loading ? "Fetching advice..." : "Get AI Advice"}
         </button>
 
         <button
-          onClick={() => generateAdvice('investment')}
+          onClick={() =>
+            generateAnswer(
+              `Based on my financial summary:
+              My current financial summary:
+    - Income: ₹${data?.incomeAmount}
+    - Expenses: ₹${data?.expensesAmount}
+    - Remaining Balance: ₹${data?.remainingAmount}
+    - Categories spend: ${data?.categories
+      .map((cat) => `${cat.name}: ₹${cat.value}`)
+      .join(", ")}
+    - Spending over days: ${data?.days
+      .map(
+        (day) =>
+          `${new Date(day.date).toLocaleDateString()}: Income: ₹${
+            day.income
+          }, Expenses: ₹${day.expenses}`
+      )
+      .join("; ")}
+              
+              , suggest investment opportunities in ₹ to improve my financial health.
+              `
+            )
+          }
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
-          disabled={loading || isLoading}
+          disabled={loading}
         >
           {loading ? "Fetching advice..." : "Investment Opportunities"}
         </button>
@@ -86,7 +145,6 @@ export default function GetWise() {
         <button
           onClick={() => setShowInput(!showInput)}
           className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 transition"
-          disabled={isLoading}
         >
           {showInput ? "Hide Ask AI" : "Ask AI"}
         </button>
@@ -119,35 +177,36 @@ export default function GetWise() {
         </div>
       )}
 
-      {/* Loading indicator */}
-      {loading && (
-        <div className="flex justify-center mt-4">
-          <Image
-            src="/logo.svg"
-            alt="Loading"
-            width={100}
-            height={100}
-            className="animate-spin-slow"
-          />
-        </div>
-      )}
-
       {/* AI Response display */}
-      {!loading && aiResponse && (
-        <Card className="mt-6 p-6 bg-gray-50 shadow-inner rounded-lg">
-          <CardHeader>
-            <h3 className="text-lg font-semibold text-center text-green-600">
-              AI Financial Planning Advice
-            </h3>
-          </CardHeader>
-          <CardContent className="prose prose-green">
-            <ReactMarkdown className="prose">{aiResponse}</ReactMarkdown>
-          </CardContent>
-        </Card>
-      )}
+      <div className="mt-6">
+        {loading ? (
+          <div className="flex justify-center mt-4">
+            <Image
+              src="/logo.svg"
+              alt="Loading"
+              width={100}
+              height={100}
+              className="animate-spin-slow"
+            />
+          </div>
+        ) : (
+          aiResponse && (
+            <Card className="mt-6 p-6 bg-gray-50 shadow-inner rounded-lg">
+              <CardHeader>
+                <h3 className="text-lg font-semibold text-center text-green-600">
+                  AI Financial Planning Advice
+                </h3>
+              </CardHeader>
+              <CardContent className="prose prose-green">
+                <ReactMarkdown className="prose">{aiResponse}</ReactMarkdown>
+              </CardContent>
+            </Card>
+          )
+        )}
+      </div>
 
       {/* Custom AI response */}
-      {!loading && customAiResponse && (
+      {customAiResponse && (
         <div className="mt-6">
           <Card className="p-4 bg-white shadow-lg rounded">
             <CardHeader>

@@ -26,7 +26,7 @@ export default function GetWise() {
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY;
 
-  async function generateAnswer(prompt) {
+  async function generateAnswer(prompt:any) {
     setLoading(true); // Start loading
     try {
       const response = await axios({
@@ -56,7 +56,7 @@ export default function GetWise() {
   }
 
   // Handler to update form data
-  const handleInputChange = (e) => {
+  const handleInputChange = (e:any) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
